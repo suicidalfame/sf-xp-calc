@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sword Factory — XP Calculator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #0d0d0f;
+    --bg2: #131317;
+    --bg3: #1a1a20;
+    --border: rgba(255,255,255,0.07);
+    --border2: rgba(255,160,40,0.25);
+    --amber: #f59e0b;
+    --amber2: #fbbf24;
+    --amber-dim: rgba(245,158,11,0.12);
+    --text: #f0ece4;
+    --text2: #9b9488;
+    --text3: #5a5650;
+    --success: #4ade80;
+    --error: #f87171;
+  }
+
+  html { background: var(--bg); color: var(--text); font-family: 'Outfit', sans-serif; min-height: 100vh; }
+
+  body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+    position: relative;
+    overflow-x: hidden;
+  }
+
+  body::before {
+    content: '';
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(245,158,11,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(245,158,11,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none; z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed; top: 50%; left: 50%;
+    transform: translate(-50%, -60%);
+    width: 700px; height: 500px;
+    background: radial-gradient(ellipse at center, rgba(245,158,11,0.06) 0%, transparent 70%);
+    pointer-events: none; z-index: 0;
+  }
+
+  .container { width: 100%; max-width: 500px; position: relative; z-index: 1; animation: fadeUp 0.6s ease both; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .header { text-align: center; margin-bottom: 2rem; animation: fadeUp 0.6s 0.05s ease both; opacity: 0; }
+
+  .sword-icon {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 52px; height: 52px;
+    background: var(--amber-dim); border: 1px solid var(--border2);
+    border-radius: 14px; margin-bottom: 1rem;
+  }
+  .sword-icon svg { width: 26px; height: 26px; }
+
+  h1 { font-family: 'Cinzel', serif; font-size: 1.6rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text); margin-bottom: 0.35rem; }
+  h1 span { color: var(--amber); }
+  .subtitle { font-size: 0.875rem; color: var(--text2); font-weight: 300; letter-spacing: 0.02em; }
+
+  .card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 18px;
+    padding: 1.75rem; position: relative; overflow: hidden;
+    animation: fadeUp 0.6s 0.1s ease both; opacity: 0;
+  }
+
+  .card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--amber2), transparent); opacity: 0.3;
+  }
+
+  .input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1rem; }
+  .field { display: flex; flex-direction: column; gap: 0.5rem; }
+
+  label { font-size: 0.75rem; font-weight: 500; color: var(--text2); letter-spacing: 0.08em; text-transform: uppercase; }
+
+  input[type="text"], input[type="number"] {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-family: 'Outfit', sans-serif; font-size: 1rem; font-weight: 400;
+    padding: 0.65rem 0.9rem; width: 100%; outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    -moz-appearance: textfield;
+  }
+  input[type="number"]::-webkit-inner-spin-button,
+  input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+  input[type="text"]:focus, input[type="number"]:focus {
+    border-color: var(--amber); box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+  }
+  input.invalid { border-color: var(--error) !important; box-shadow: 0 0 0 3px rgba(248,113,113,0.1) !important; }
+  input::placeholder { color: var(--text3); }
+
+  .val-hint { font-size: 0.72rem; color: var(--text3); min-height: 1.1em; transition: color 0.2s; letter-spacing: 0.02em; }
+  .val-hint.ok { color: var(--success); }
+  .val-hint.err { color: var(--error); }
+
+  /* Abbreviation reference chips */
+  .abbrev-label { font-size: 0.7rem; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.4rem; }
+  .abbrev-row { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 1.25rem; }
+
+  .chip {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 6px;
+    font-size: 0.7rem; color: var(--text2); padding: 3px 8px;
+    cursor: pointer; transition: border-color 0.15s, color 0.15s; user-select: none;
+  }
+  .chip:hover { border-color: var(--border2); color: var(--amber2); }
+  .chip b { font-weight: 600; color: var(--amber); }
+
+  .slider-field { display: flex; flex-direction: column; gap: 0.5rem; }
+  .slider-header { display: flex; justify-content: space-between; align-items: center; }
+  .slider-val { font-family: 'Cinzel', serif; font-size: 0.85rem; font-weight: 600; color: var(--amber); min-width: 20px; text-align: right; }
+
+  input[type="range"] {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 4px; background: var(--bg3);
+    border-radius: 99px; outline: none; border: 1px solid var(--border); cursor: pointer; margin: 4px 0;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none; appearance: none;
+    width: 18px; height: 18px; border-radius: 50%;
+    background: var(--amber); border: 2px solid var(--bg2);
+    box-shadow: 0 0 8px rgba(245,158,11,0.5); cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  input[type="range"]::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 0 14px rgba(245,158,11,0.7); }
+  input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: var(--amber); border: 2px solid var(--bg2); cursor: pointer; }
+
+  .divider { border: none; border-top: 1px solid var(--border); margin: 1.5rem 0; }
+
+  .result-section { text-align: center; margin-bottom: 1.5rem; }
+  .result-label { font-size: 0.75rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text2); margin-bottom: 0.5rem; }
+
+  .xp-number {
+    font-family: 'Cinzel', serif; font-size: 3.5rem; font-weight: 700;
+    color: var(--amber2); line-height: 1;
+    text-shadow: 0 0 30px rgba(251,191,36,0.25); letter-spacing: -0.01em;
+  }
+  .xp-number.pulse { animation: xpPulse 0.25s ease; }
+
+  @keyframes xpPulse {
+    0%  { transform: scale(1); }
+    50% { transform: scale(1.04); text-shadow: 0 0 40px rgba(251,191,36,0.45); }
+    100%{ transform: scale(1); }
+  }
+
+  .xp-unit { font-size: 0.8rem; color: var(--text2); margin-top: 0.3rem; letter-spacing: 0.06em; text-transform: uppercase; }
+  .xp-full { font-size: 0.72rem; color: var(--text3); margin-top: 0.25rem; font-family: 'Outfit', monospace; min-height: 1.1em; }
+
+  .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 1.25rem; }
+  .stat { background: var(--bg3); border: 1px solid var(--border); border-radius: 12px; padding: 0.85rem 1rem; }
+  .stat-label { font-size: 0.7rem; color: var(--text3); letter-spacing: 0.07em; text-transform: uppercase; margin-bottom: 0.3rem; }
+  .stat-val { font-size: 1.1rem; font-weight: 600; color: var(--text); }
+  .stat-val.green { color: var(--success); }
+
+  .formula {
+    background: var(--bg3); border: 1px solid var(--border); border-radius: 10px;
+    padding: 0.75rem 1rem; font-family: 'Outfit', monospace; font-size: 0.8rem;
+    color: var(--text2); display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+  }
+  .formula .eq-highlight { color: var(--amber2); font-weight: 600; }
+
+  .footer { text-align: center; margin-top: 1.5rem; font-size: 0.75rem; color: var(--text3); letter-spacing: 0.04em; animation: fadeUp 0.6s 0.2s ease both; opacity: 0; }
+  .footer a { color: var(--text2); text-decoration: none; }
+  .footer a:hover { color: var(--amber); }
+
+  @media (max-width: 420px) {
+    .input-grid { grid-template-columns: 1fr; }
+    .xp-number { font-size: 2.8rem; }
+    h1 { font-size: 1.35rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <div class="sword-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14.5 17.5L3 6V3h3l11.5 11.5"/>
+        <path d="M13 19l6-6"/><path d="M16 16l4 4"/>
+        <path d="M19 21l2-2"/><path d="M5 8l4 4"/>
+      </svg>
+    </div>
+    <h1>Sword <span>Factory</span></h1>
+    <p class="subtitle">XP Calculator</p>
+  </div>
+
+  <div class="card">
+
+    <div class="input-grid">
+      <div class="field">
+        <label for="swordVal">Sword Value</label>
+        <input type="text" id="swordVal" value="1000" placeholder="e.g. 10qn, 5.5b" oninput="calculate()" autocomplete="off" spellcheck="false">
+        <span class="val-hint" id="valHint">= 1,000</span>
+      </div>
+      <div class="field">
+        <label for="insightNum">Insight Level</label>
+        <input type="number" id="insightNum" value="0" min="0" step="1" placeholder="0" oninput="syncFromNumber()">
+        <span class="val-hint">&nbsp;</span>
+      </div>
+    </div>
+
+    <p class="abbrev-label">Quick suffixes — click to apply</p>
+    <div class="abbrev-row" id="chipRow"></div>
+
+    <div class="slider-field">
+      <div class="slider-header">
+        <label for="insightSlider">Insight Slider</label>
+        <span class="slider-val" id="sliderDisplay">0</span>
+      </div>
+      <input type="range" id="insightSlider" min="0" max="100" value="0" step="1" oninput="syncFromSlider()">
+    </div>
+
+    <hr class="divider">
+
+    <div class="result-section">
+      <p class="result-label">XP Gained</p>
+      <p class="xp-number" id="xpResult">200</p>
+      <p class="xp-unit">Experience Points</p>
+      <p class="xp-full" id="xpFull"></p>
+    </div>
+
+    <div class="stats">
+      <div class="stat">
+        <p class="stat-label">Base XP</p>
+        <p class="stat-val" id="baseXp">200</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Insight Bonus</p>
+        <p class="stat-val green" id="bonusXp">+0</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Multiplier</p>
+        <p class="stat-val" id="multiplier">×1.0</p>
+      </div>
+      <div class="stat">
+        <p class="stat-label">Insight Level</p>
+        <p class="stat-val" id="insightDisplay">0</p>
+      </div>
+    </div>
+
+    <div class="formula" id="formulaBar">
+      ( 1000 / 5 ) &times; ( 1 + 0 ) = <span class="eq-highlight">200</span>
+    </div>
+
+  </div>
+
+  <p class="footer">Sword Factory · Roblox &nbsp;·&nbsp; <a href="https://www.roblox.com" target="_blank">roblox.com</a></p>
+
+</div>
+
+<script>
+  // Suffixes ordered longest first so "qn" matches before "q", etc.
+  var SUFFIXES = [
+    { s: 'ud', v: 1e36,  label: 'Undecillion' },
+    { s: 'dc', v: 1e33,  label: 'Decillion'   },
+    { s: 'no', v: 1e30,  label: 'Nonillion'   },
+    { s: 'oc', v: 1e27,  label: 'Octillion'   },
+    { s: 'sp', v: 1e24,  label: 'Septillion'  },
+    { s: 'sx', v: 1e21,  label: 'Sextillion'  },
+    { s: 'qn', v: 1e18,  label: 'Quintillion' },
+    { s: 'qd', v: 1e15,  label: 'Quadrillion' },
+    { s: 't',  v: 1e12,  label: 'Trillion'    },
+    { s: 'b',  v: 1e9,   label: 'Billion'     },
+    { s: 'm',  v: 1e6,   label: 'Million'     },
+    { s: 'k',  v: 1e3,   label: 'Thousand'    },
+  ];
+
+  // Build suffix chips
+  var chipRow = document.getElementById('chipRow');
+  SUFFIXES.slice().reverse().forEach(function(sf) {
+    var c = document.createElement('span');
+    c.className = 'chip';
+    c.title = sf.label;
+    c.innerHTML = '<b>' + sf.s.toUpperCase() + '</b> ' + sf.label;
+    c.onclick = function() {
+      var cur = document.getElementById('swordVal').value.trim();
+      // Strip any existing suffix to get just the number part
+      var numPart = cur.replace(/[a-zA-Z]+$/, '').trim();
+      if (numPart === '' || isNaN(parseFloat(numPart))) numPart = '1';
+      document.getElementById('swordVal').value = numPart + sf.s;
+      calculate();
+    };
+    chipRow.appendChild(c);
+  });
+
+  // Parse "10qn", "5.5b", "1000", "2K" → raw number
+  function parseValue(str) {
+    str = str.trim().toLowerCase().replace(/,/g, '');
+    if (!str) return NaN;
+    for (var i = 0; i < SUFFIXES.length; i++) {
+      var sf = SUFFIXES[i];
+      if (str.endsWith(sf.s)) {
+        var base = parseFloat(str.slice(0, str.length - sf.s.length));
+        return isNaN(base) ? NaN : base * sf.v;
+      }
+    }
+    return parseFloat(str);
+  }
+
+  // Convert raw number → abbreviated string (e.g. 1e18 → "1QN")
+  function toAbbrev(n) {
+    if (n === 0) return '0';
+    if (!isFinite(n)) return '∞';
+    var abs = Math.abs(n);
+    for (var i = 0; i < SUFFIXES.length; i++) {
+      if (abs >= SUFFIXES[i].v) {
+        var divided = n / SUFFIXES[i].v;
+        // up to 4 sig figs, strip trailing zeros
+        var str = parseFloat(divided.toPrecision(4)).toString();
+        return str + SUFFIXES[i].s.toUpperCase();
+      }
+    }
+    return Math.round(n).toLocaleString();
+  }
+
+  // Smart display: abbreviate if >= 1 million, otherwise plain locale string
+  function fmt(n) {
+    return Math.abs(n) >= 1e6 ? toAbbrev(n) : Math.round(n).toLocaleString();
+  }
+
+  var lastDisplay = '';
+
+  function calculate() {
+    var rawStr = document.getElementById('swordVal').value;
+    var val = parseValue(rawStr);
+    var insight = Math.max(0, parseInt(document.getElementById('insightNum').value) || 0);
+
+    var hintEl   = document.getElementById('valHint');
+    var inputEl  = document.getElementById('swordVal');
+
+    if (isNaN(val) || rawStr.trim() === '') {
+      hintEl.textContent = 'invalid — try e.g. 10qn or 5000';
+      hintEl.className = 'val-hint err';
+      inputEl.classList.add('invalid');
+      return;
+    }
+
+    inputEl.classList.remove('invalid');
+    hintEl.textContent = val >= 1000 ? '= ' + val.toLocaleString() : '= ' + val;
+    hintEl.className = val >= 1e3 ? 'val-hint ok' : 'val-hint';
+
+    var base  = val / 5;
+    var xp    = base * (1 + insight);
+    var bonus = xp - base;
+    var mult  = 1 + insight;
+
+    var xpDisplay = fmt(xp);
+    var xpEl = document.getElementById('xpResult');
+    xpEl.textContent = xpDisplay;
+    if (xpDisplay !== lastDisplay) {
+      xpEl.classList.remove('pulse');
+      void xpEl.offsetWidth;
+      xpEl.classList.add('pulse');
+      lastDisplay = xpDisplay;
+    }
+
+    // Show full integer below abbreviated result
+    var xpFullEl = document.getElementById('xpFull');
+    xpFullEl.textContent = xp >= 1e6 ? Math.round(xp).toLocaleString() : '';
+
+    document.getElementById('baseXp').textContent       = fmt(base);
+    document.getElementById('bonusXp').textContent      = '+' + fmt(bonus);
+    document.getElementById('multiplier').textContent   = '×' + mult.toFixed(1);
+    document.getElementById('insightDisplay').textContent = insight;
+
+    var valLabel = val >= 1e6 ? toAbbrev(val) : val.toLocaleString();
+    document.getElementById('formulaBar').innerHTML =
+      '( ' + valLabel + ' / 5 ) &times; ( 1 + ' + insight + ' ) = <span class="eq-highlight">' + xpDisplay + '</span>';
+  }
+
+  function syncFromSlider() {
+    var v = document.getElementById('insightSlider').value;
+    document.getElementById('sliderDisplay').textContent = v;
+    document.getElementById('insightNum').value = v;
+    calculate();
+  }
+
+  function syncFromNumber() {
+    var v = Math.max(0, parseInt(document.getElementById('insightNum').value) || 0);
+    var max = parseInt(document.getElementById('insightSlider').max);
+    document.getElementById('insightSlider').value = Math.min(v, max);
+    document.getElementById('sliderDisplay').textContent = v;
+    calculate();
+  }
+
+  calculate();
+</script>
+</body>
+</html>
